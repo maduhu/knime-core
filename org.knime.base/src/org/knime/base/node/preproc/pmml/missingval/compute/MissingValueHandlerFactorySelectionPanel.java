@@ -92,30 +92,36 @@ public class MissingValueHandlerFactorySelectionPanel extends JPanel implements 
 
     private JPanel m_argumentsPanel;
 
+    private final MissingCellHandlerFactoryManager m_handlerFactoryManager;
+
     /**
      * Constructor for the MissingValueHandlerFactorySelectionPanel.
      * @param dt the data type this panel is for
      * @param s the current settings for this data type
+     * @param factoryManager manager keeping the missing value factories
      * @param specs the input specs
      */
     public MissingValueHandlerFactorySelectionPanel(final DataType dt, final MVIndividualSettings s,
-                                                    final PortObjectSpec[] specs) {
-        this(new DataType[]{dt}, s, specs);
+        final MissingCellHandlerFactoryManager factoryManager, final PortObjectSpec[] specs) {
+
+        this(new DataType[]{dt}, s, factoryManager, specs);
     }
 
     /**
      * Constructor for the MissingValueHandlerFactorySelectionPanel.
      * @param dt the data types this panel is for
      * @param s the current settings for this data type
+     * @param factoryManager manager keeping the missing value factories
      * @param specs the input specs
      */
     public MissingValueHandlerFactorySelectionPanel(final DataType[] dt, final MVIndividualSettings s,
-                                                 final PortObjectSpec[] specs) {
+        final MissingCellHandlerFactoryManager factoryManager, final PortObjectSpec[] specs) {
+
         // Each settings panel for the different factories is a card in a card layout.
         // The change of the cards is triggered by the combo box.
         m_argumentsPanel = new JPanel(new DynamicCardLayout());
         m_comboBox = new JComboBox<MissingCellHandlerFactory>();
-        for (MissingCellHandlerFactory fac : MissingCellHandlerFactoryManager.getInstance().getFactories(dt)) {
+        for (MissingCellHandlerFactory fac : factoryManager.getFactoriesSorted(dt)) {
             m_comboBox.addItem(fac);
             if (fac.hasSettingsPanel()) {
                 MissingValueHandlerPanel panel = fac.getSettingsPanel();
@@ -150,6 +156,8 @@ public class MissingValueHandlerFactorySelectionPanel extends JPanel implements 
         gbc.gridy++;
         gbc.fill = GridBagConstraints.BOTH;
         add(m_argumentsPanel, gbc);
+
+        m_handlerFactoryManager = factoryManager;
     }
 
     /**
@@ -183,7 +191,7 @@ public class MissingValueHandlerFactorySelectionPanel extends JPanel implements 
      * @throws InvalidSettingsException if a user defined panel throws an error while saving its settings.
      */
     public MVIndividualSettings getSettings() throws InvalidSettingsException {
-        MVIndividualSettings settings = new MVIndividualSettings(getSelectedFactory());
+        MVIndividualSettings settings = new MVIndividualSettings(getSelectedFactory(), m_handlerFactoryManager);
         MissingValueHandlerPanel selectedPanel = getCurrentPanel();
         if (selectedPanel != null) {
             selectedPanel.saveSettingsTo(settings.getSettings());

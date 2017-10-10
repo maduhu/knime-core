@@ -303,14 +303,16 @@ public abstract class MissingCellHandler {
     /**
      * Creates a missing cell handler from an extension that is inside of a PMML derived field.
      * @param column the column this handler is used for
+     * @param manager missing value factory manager
      * @param ext the extension containing the necessary information
      * @return a missing cell handler that was initialized from the extension
      * @throws InvalidSettingsException if the the factory from the extension is not applicable for the column
      */
-    public static MissingCellHandler fromPMMLExtension(final DataColumnSpec column, final Extension ext)
-                                                                throws InvalidSettingsException {
+    protected static MissingCellHandler fromPMMLExtension(final DataColumnSpec column,
+        final MissingCellHandlerFactoryManager manager, final Extension ext) throws InvalidSettingsException {
+
         String factoryID = ext.getValue();
-        MissingCellHandlerFactory fac = MissingCellHandlerFactoryManager.getInstance().getFactoryByID(factoryID);
+        MissingCellHandlerFactory fac = manager.getFactoryByID(factoryID);
         if (!fac.isApplicable(column.getType())) {
             throw new InvalidSettingsException("Missing cell handler " + fac.getDisplayName()
                 + " is not applicable for columns of type " + column.getType().toString() + ".");
@@ -352,5 +354,19 @@ public abstract class MissingCellHandler {
                             + ex.getMessage());
         }
         return handler;
+    }
+
+    /**
+     * Creates a missing cell handler from an extension that is inside of a PMML derived field.
+     * @param column the column this handler is used for
+     * @param ext the extension containing the necessary information
+     * @return a missing cell handler that was initialized from the extension
+     * @throws InvalidSettingsException if the the factory from the extension is not applicable for the column
+     */
+    public static MissingCellHandler fromPMMLExtension(final DataColumnSpec column, final Extension ext)
+                                                                throws InvalidSettingsException {
+
+        final MissingCellHandlerFactoryManager manager = MissingCellHandlerFactoryManager.getInstance();
+        return fromPMMLExtension(column, manager, ext);
     }
 }
