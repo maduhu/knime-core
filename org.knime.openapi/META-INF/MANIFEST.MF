@@ -1,0 +1,11 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: KNIME OpenAPI Spec generator
+Bundle-SymbolicName: org.knime.openapi;singleton:=true
+Bundle-Version: 3.5.0.qualifier
+Bundle-Vendor: KNIME AG, Zurich, Switzerland
+Bundle-RequiredExecutionEnvironment: JavaSE-1.8
+Bundle-ActivationPolicy: lazy
+Require-Bundle: org.knime.core;bundle-version="[3.5.0,4.0.0)",
+ com.fasterxml.jackson.core.jackson-core;bundle-version="[2.8.6,3.0.0)",
+ com.fasterxml.jackson.core.jackson-databind;bundle-version="[2.7.1,3.0.0)"
