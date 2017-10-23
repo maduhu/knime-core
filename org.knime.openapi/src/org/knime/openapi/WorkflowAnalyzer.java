@@ -55,6 +55,7 @@ public class WorkflowAnalyzer implements IApplication {
 					properties.add(e.getKey(), input);
 				}
 			}
+			root.add("type", "object");
 			root.add("properties", properties);
 		}
 
