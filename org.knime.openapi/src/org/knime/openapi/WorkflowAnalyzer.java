@@ -34,19 +34,81 @@ import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.core.util.LockFailedException;
 
+/**
+ * Application and singleton class that allows to create OpenAPI fragments that describes the in- and output of
+ * workflows when used as REST resources.
+ *
+ * @author Thorsten Meinl, KNIME.com, Zurich, Switzerland
+ */
 public class WorkflowAnalyzer implements IApplication {
 	private final JsonWriterFactory m_writerFactory;
-	
+
+	private static final WorkflowAnalyzer INSTANCE = new WorkflowAnalyzer();
+
+	/**
+	 * Returns the singleton instance.
+	 *
+	 * @return the singleton instance
+	 */
+	public static final WorkflowAnalyzer getInstance() {
+		return INSTANCE;
+	}
+
+	/**
+	 * Only used by the Eclipse framework. Use {@link #getInstance()} instead.
+	 */
 	public WorkflowAnalyzer() {
 		Map<String, Object> props = Collections.singletonMap(JsonGenerator.PRETTY_PRINTING, true);
 		m_writerFactory = Json.createWriterFactory(props);
 	}
-	
-	public JsonObject createOpenAPI(WorkflowManager wfm) {
+
+	/**
+	 * Analyzes the given workflow and generated an OpenAPI fragment for the workflow's input parameters. The returned
+	 * object is the schema description of all input parameters. Example:
+	 * <pre>
+	 * {
+     *    "type: "object",
+     *    "properties": {
+     *       "int-input-7": {
+     *         "type":"object",
+     *           "properties": {
+     *             "integer": {
+     *                "type":"integer",
+     *                "default":42
+     *             }
+     *           },
+     *           "description": "Enter a number for this value",
+     *           "example": {
+     *             "integer": 42
+     *           }
+     *       },
+     *    "string-input-1": {
+     *       "type":"object",
+     *       "properties": {
+     *         "string": {
+     *           "type": "string",
+     *            "default": "Default value from the dialog"
+     *         }
+     *       },
+     *       "description": "Enter a string here",
+     *       "example": {
+     *         "string": "Default value from the dialog"
+     *       }
+     *     }
+     *   }
+     * }
+	 * </pre>
+	 *
+	 * In case the workflow doesn't have any input parameters an empty object is returned.
+	 *
+	 * @param wfm a workflow manager, must not be <code>null</code>
+	 * @return a JSON object
+	 */
+	public JsonObject createInputParametersDescription(final WorkflowManager wfm) {
 		JsonObjectBuilder root = Json.createObjectBuilder();
 		if (!wfm.getInputNodes().isEmpty()) {
 			JsonObjectBuilder properties = Json.createObjectBuilder();
-	
+
 			for (Map.Entry<String, ExternalNodeData> e : wfm.getInputNodes().entrySet()) {
 				if (e.getValue().getJSONValue() != null) {
 					JsonObjectBuilder input = translateToSchema(e.getValue().getJSONValue());
@@ -62,7 +124,7 @@ public class WorkflowAnalyzer implements IApplication {
 		return root.build();
 	}
 
-	private JsonObjectBuilder translateToSchema(JsonValue v) {
+	private JsonObjectBuilder translateToSchema(final JsonValue v) {
 		JsonObjectBuilder node = Json.createObjectBuilder();
 
 		if (v instanceof JsonObject) {
@@ -102,13 +164,13 @@ public class WorkflowAnalyzer implements IApplication {
 		return node;
 	}
 
-	public boolean writeOpenAPIInfo(Path workflowDir) throws IOException, InvalidSettingsException,
+	private boolean writeOpenAPIInfo(final Path workflowDir) throws IOException, InvalidSettingsException,
 			CanceledExecutionException, UnsupportedWorkflowVersionException, LockFailedException {
 		WorkflowLoadHelper lh = new WorkflowLoadHelper(workflowDir.toFile());
 		WorkflowManager wfm = WorkflowManager.loadProject(workflowDir.toFile(), new ExecutionMonitor(), lh)
 				.getWorkflowManager();
 
-		JsonObject api = createOpenAPI(wfm);
+		JsonObject api = createInputParametersDescription(wfm);
 
 		if (!api.isEmpty()) {
 			try (JsonWriter out = m_writerFactory
@@ -122,13 +184,19 @@ public class WorkflowAnalyzer implements IApplication {
 	}
 
 	@Override
-	public Object start(IApplicationContext context) throws Exception {
+	public Object start(final IApplicationContext context) throws Exception {
 		String[] args = (String[]) context.getArguments().get(IApplicationContext.APPLICATION_ARGS);
+
+		if (args.length != 1) {
+		    System.out.println("Usage: OpenAPIWorkflowAnalyzer <dir>");
+		    System.out.println(" <dir>: a directory that is recursivly scanned for workflow");
+		    return IApplication.EXIT_OK;
+		}
 
 		Path root = Paths.get(args[0]);
 		Files.walkFileTree(root, new SimpleFileVisitor<Path>() {
 			@Override
-			public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
+			public FileVisitResult preVisitDirectory(final Path dir, final BasicFileAttributes attrs) throws IOException {
 				Path workflowFile = dir.resolve(WorkflowPersistor.WORKFLOW_FILE);
 				if (Files.exists(workflowFile)) {
 					try {
